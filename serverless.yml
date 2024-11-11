@@ -5,6 +5,42 @@ stages:
     params:
       tableName: ${self:service}-${sls:stage}
 
+custom:
+  tableName: ${self:service}-${sls:stage}
+  region: ${opt:region, 'eu-central-1'}
+  pythonRequirements:
+    dockerizePip: true
+    layer:
+      name: python-deps
+      description: Python dependencies
+  dynamodb:
+    stages:
+      - local
+      - dev
+      - prod
+    start:
+      port: 8000
+      inMemory: true
+      migrate: true
+      seed: true
+    seed:
+      local:
+        sources:
+          - table: ${self:custom.tableName}
+            sources: [./seeds/connected_vehicles.json]
+  stepFunctions:
+    simulate:
+      services: 
+        - dynamodb
+    enabled: true
+
+plugins:
+  - serverless-python-requirements
+  - serverless-step-functions
+  - serverless-dynamodb-local
+  - serverless-offline-step-functions
+  - serverless-offline
+
 provider:
   name: aws
   region: eu-central-1
@@ -16,6 +52,8 @@ provider:
     POWERTOOLS_SERVICE_NAME: ${self:service}
     LOG_LEVEL: DEBUG
     STATE_MACHINE_ARN: !Ref CreateItemStateMachine
+    DYNAMODB_ENDPOINT: ${self:custom.dynamodbEndpoint, ''}
+    AWS_ACCOUNT_ID: ${aws:accountId, 'LOCAL'}
   httpApi:
     cors: true
   iam:
@@ -48,11 +86,6 @@ provider:
             - logs:PutLogEvents
           Resource: 'arn:aws:logs:*:*:*'
 
-plugins:
-  - serverless-python-requirements
-  - serverless-step-functions
-  - serverless-iam-roles-per-function
-
 package:
   individually: true
   patterns:
@@ -71,12 +104,6 @@ layers:
     compatibleRuntimes:
       - python3.12
     retain: false
-
-custom:
-  pythonRequirements:
-    layer:
-      name: python-deps
-      description: Python dependencies including PynamoDB
 
 functions:
   apiHandler:

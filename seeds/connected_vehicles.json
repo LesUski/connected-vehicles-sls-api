@@ -1,0 +1,27 @@
+{
+  "Connected_Vehicle": [
+    {
+      "PutRequest": {
+        "Item": {
+          "PK": { "S": "VIN#WDDJK7DA4FF954840" },
+          "SK": { "S": "#META#" },
+          "vehicle_id": { "S": "WDDJK7DA4FF954840" },
+          "torque": { "S": "308" },
+          "drivetrain": { "S": "4WD" },
+          "engine": { "S": "gasoline" },
+          "horsepower": { "S": "406" }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "PK": { "S": "ID#cbrawley0" },
+          "SK": { "S": "#META#" },
+          "user_name": { "S": "cbrawley0" },
+          "user_phone": { "S": "+17778889999" }
+        }
+      }
+    }
+  ]
+}
