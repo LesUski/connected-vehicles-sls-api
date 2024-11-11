@@ -13,11 +13,14 @@ custom:
     layer:
       name: python-deps
       description: Python dependencies
-  dynamodb:
+  offline:
+    httpPort: 4000
+    lambdaPort: 4002
+    websocketPort: 4001
+    noPrependStageInUrl: true
+    # DynamoDB Local configuration
     stages:
       - local
-      - dev
-      - prod
     start:
       port: 8000
       inMemory: true
@@ -28,17 +31,10 @@ custom:
         sources:
           - table: ${self:custom.tableName}
             sources: [./seeds/connected_vehicles.json]
-  stepFunctions:
-    simulate:
-      services: 
-        - dynamodb
-    enabled: true
 
 plugins:
   - serverless-python-requirements
   - serverless-step-functions
-  - serverless-dynamodb-local
-  - serverless-offline-step-functions
   - serverless-offline
 
 provider:
@@ -113,20 +109,16 @@ functions:
       - httpApi:
           path: /vehicles
           method: POST
-          cors: true
       - httpApi:
           path: /vehicles/{vehicle_id}/features
           method: POST
-          cors: true
       # User endpoints
       - httpApi:
           path: /users
           method: POST
-          cors: true
       - httpApi:
           path: /users/{user_id}/preferences
           method: POST
-          cors: true
     environment:
       POWERTOOLS_METRICS_NAMESPACE: ${self:service}-api
 

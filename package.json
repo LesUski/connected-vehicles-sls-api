@@ -3,10 +3,7 @@
   "version": "1.0.0",
   "description": "Connected Vehicles API with AWS Serverless",
   "scripts": {
-    "start": "serverless offline start",
-    "start:api": "serverless offline start --stage local",
-    "start:dynamo": "docker-compose up dynamodb",
-    "dynamodb:create-tables": "node scripts/create-tables.js",
+    "start:local": "serverless offline start --stage local",
     "test": "pytest",
     "test:watch": "pytest -f",
     "deploy": "serverless deploy",
@@ -15,12 +12,8 @@
   },
   "devDependencies": {
     "serverless": "^3.38.0",
-    "serverless-dynamodb-local": "^0.1.1",
-    "serverless-layers": "^2.8.5",
-    "serverless-offline": "^14.3.4",
-    "serverless-offline-step-functions": "^1.2.6",
-    "serverless-python-requirements": "^6.1.1",
-    "serverless-step-functions": "^3.21.1",
-    "aws-sdk": "^2.1550.0"
+    "serverless-python-requirements": "^6.0.1",
+    "serverless-step-functions": "^3.19.0",
+    "serverless-offline": "^13.3.3"
   }
 }

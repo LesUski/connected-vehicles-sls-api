@@ -67,3 +67,4 @@ wheels/
 *.egg
 MANIFEST
 .python-version
+package-lock.json

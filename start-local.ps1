@@ -1,14 +1,39 @@
-# Create necessary directories
-New-Item -ItemType Directory -Force -Path "docker/dynamodb"
+# Create a vehicle
+$vehicleBody = @{
+    vehicle_id = "WDDJK7DA4FF954840"
+    torque = "308"
+    drivetrain = "4WD"
+    engine = "gasoline"
+    horsepower = "406"
+} | ConvertTo-Json
 
-# Start DynamoDB in Docker
-Start-Process powershell -ArgumentList "docker-compose up dynamodb" -NoNewWindow
+$createVehicleParams = @{
+    Method = "POST"
+    Uri = "http://localhost:3000/vehicles"
+    ContentType = "application/json"
+    Body = $vehicleBody
+}
 
-# Wait for DynamoDB to start
-Start-Sleep -Seconds 5
+Invoke-RestMethod @createVehicleParams
 
-# Create tables and load seed data
-npm run dynamodb:create-tables
+# Create a vehicle feature
+$featureBody = @{
+    feature_type = "cameras"
+    feature_data = @{
+        cameras = @{
+            front_camera_center = @{
+                foo = "bar"
+            }
+        }
+        recording_is_active = $true
+    }
+} | ConvertTo-Json -Depth 10
 
-# Start the Serverless Offline API
-npm run start:api
+$createFeatureParams = @{
+    Method = "POST"
+    Uri = "http://localhost:3000/vehicles/WDDJK7DA4FF954840/features"
+    ContentType = "application/json"
+    Body = $featureBody
+}
+
+Invoke-RestMethod @createFeatureParams
