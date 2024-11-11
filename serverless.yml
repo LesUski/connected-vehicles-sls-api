@@ -1,0 +1,166 @@
+service: connected-vehicles-api
+
+stages:
+  default:
+    params:
+      tableName: ${self:service}-${sls:stage}
+
+provider:
+  name: aws
+  region: eu-central-1
+  runtime: python3.12
+  layers:
+    - !GetAtt PythonRequirements.LayerArn
+  environment:
+    TABLE_NAME: ${self:custom.tableName}
+    POWERTOOLS_SERVICE_NAME: ${self:service}
+    LOG_LEVEL: DEBUG
+    STATE_MACHINE_ARN: !Ref CreateItemStateMachine
+  httpApi:
+    cors: true
+  iam:
+    role:
+      statements:
+        # DynamoDB Permissions
+        - Effect: Allow
+          Action:
+            - dynamodb:PutItem
+            - dynamodb:GetItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+            - dynamodb:Query
+            - dynamodb:Scan
+          Resource: 
+            - !GetAtt ConnectedVehicleTable.Arn
+            - !Join ['', [!GetAtt ConnectedVehicleTable.Arn, '/index/*']]
+        # Step Functions Permissions
+        - Effect: Allow
+          Action:
+            - states:StartExecution
+            - states:DescribeExecution
+            - states:StopExecution
+          Resource: !Ref CreateItemStateMachine
+        # CloudWatch Permissions
+        - Effect: Allow
+          Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+          Resource: 'arn:aws:logs:*:*:*'
+
+plugins:
+  - serverless-python-requirements
+  - serverless-step-functions
+  - serverless-iam-roles-per-function
+
+package:
+  individually: true
+  patterns:
+    - '!node_modules/**'
+    - '!tests/**'
+    - '!.pytest_cache/**'
+    - '!__pycache__/**'
+    - '!requirements.txt'
+    - '!package.json'
+    - '!package-lock.json'
+
+layers:
+  pythonRequirements:
+    name: ${self:service}-python-deps-${sls:stage}
+    description: Python dependencies including PynamoDB and AWS Lambda Powertools
+    compatibleRuntimes:
+      - python3.12
+    retain: false
+
+custom:
+  pythonRequirements:
+    layer:
+      name: python-deps
+      description: Python dependencies including PynamoDB
+
+functions:
+  apiHandler:
+    handler: src/handlers/api_handler.handle
+    events:
+      # Vehicle endpoints
+      - httpApi:
+          path: /vehicles
+          method: POST
+          cors: true
+      - httpApi:
+          path: /vehicles/{vehicle_id}/features
+          method: POST
+          cors: true
+      # User endpoints
+      - httpApi:
+          path: /users
+          method: POST
+          cors: true
+      - httpApi:
+          path: /users/{user_id}/preferences
+          method: POST
+          cors: true
+    environment:
+      POWERTOOLS_METRICS_NAMESPACE: ${self:service}-api
+
+  validateHandler:
+    handler: src/handlers/validate_handler.handle
+    environment:
+      POWERTOOLS_METRICS_NAMESPACE: ${self:service}-validation
+
+  processHandler:
+    handler: src/handlers/process_handler.handle
+    environment:
+      POWERTOOLS_METRICS_NAMESPACE: ${self:service}-process
+
+
+stepFunctions:
+  validate: true
+  stateMachines:
+    createItemWorkflow:
+      name: ${self:service}-workflow-${sls:stage}
+      definition:
+        StartAt: ValidateInput
+        States:
+          ValidateInput:
+            Type: Task
+            Resource: !GetAtt validateHandler.Arn
+            Next: ProcessItem
+            Catch:
+              - ErrorEquals: ["ValidationError"]
+                Next: ValidationFailed
+          ProcessItem:
+            Type: Task
+            Resource: !GetAtt processHandler.Arn
+            Next: Success
+            Catch:
+              - ErrorEquals: ["ProcessingError"]
+                Next: ProcessingFailed
+          ValidationFailed:
+            Type: Fail
+            Cause: "Item validation failed"
+          ProcessingFailed:
+            Type: Fail
+            Cause: "Item processing failed"
+          Success:
+            Type: Succeed
+
+resources:
+  Resources:
+    ConnectedVehicleTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${param:tableName}
+        KeySchema:
+          - AttributeName: PK
+            KeyType: HASH
+          - AttributeName: SK
+            KeyType: RANGE
+        AttributeDefinitions:
+          - AttributeName: PK
+            AttributeType: S
+          - AttributeName: SK
+            AttributeType: S
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
