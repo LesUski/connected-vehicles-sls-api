@@ -1,6 +1,6 @@
 from pynamodb.attributes import UnicodeAttribute, MapAttribute
-from base import BaseModel
-from attributes import (
+from .base import BaseModel
+from .attributes import (
     SeatsMapAttribute,
     CamerasMapAttribute,
     MirrorsMapAttribute,

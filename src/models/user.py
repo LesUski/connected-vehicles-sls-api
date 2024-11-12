@@ -1,5 +1,5 @@
-from base import BaseModel
-from attributes import (
+from .base import BaseModel
+from .attributes import (
     UnicodeAttribute,
     MapAttribute,
     SeatsMapAttribute,
